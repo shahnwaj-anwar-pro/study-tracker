@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Nexus Study Tracker - 240 Hour Challenge</title>
     <style>
         * {
@@ -79,7 +79,7 @@
         .container {
             max-width: 1200px;
             width: 100%;
-            background: rgba(26, 26, 46, 0.8);
+            background: rgba(26, 26, 46, 0.85);
             border-radius: 20px;
             padding: 40px;
             backdrop-filter: blur(10px);
@@ -510,20 +510,83 @@
             bottom: 100%;
             left: 50%;
             transform: translateX(-50%);
-            background: var(--card-bg);
+            background: linear-gradient(180deg, rgba(26,26,46,1), rgba(26,26,46,0.9));
             color: var(--text-primary);
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: 0.8em;
-            white-space: nowrap;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.85em;
+            white-space: normal;
+            max-width: 220px;
             opacity: 0;
             pointer-events: none;
-            transition: opacity 0.3s ease;
+            transition: opacity 0.2s ease;
             z-index: 100;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+            border: 1px solid rgba(0,255,204,0.08);
+        }
+
+        .tooltip .line {
+            margin-bottom: 6px;
+            color: var(--text-secondary);
         }
 
         .history-day:hover .tooltip {
             opacity: 1;
+        }
+
+        /* New inputs area for goals/conclusion */
+        .notes-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            margin-top: 18px;
+        }
+
+        .note-card {
+            background: rgba(255,255,255,0.02);
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(124,58,237,0.06);
+        }
+
+        .note-card textarea {
+            width: 100%;
+            min-height: 70px;
+            resize: vertical;
+            padding: 10px;
+            border-radius: 8px;
+            background: rgba(10,10,15,0.6);
+            color: var(--text-primary);
+            border: 1px solid rgba(255,255,255,0.04);
+            outline: none;
+            font-size: 0.95em;
+        }
+
+        .note-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .small-btn {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .small-btn.save {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: #fff;
+        }
+
+        .note-meta {
+            font-size: 0.8em;
+            color: var(--text-secondary);
+            margin-top: 6px;
         }
 
         @media (max-width: 768px) {
@@ -587,7 +650,7 @@
 </head>
 <body>
     <div class="particles" id="particles"></div>
-    
+
     <div class="power-mode">
         <button class="power-toggle" onclick="togglePowerMode()">⚡ POWER MODE</button>
     </div>
@@ -662,6 +725,45 @@
                     <button class="btn btn-secondary" id="undoBtn" onclick="undoLastEntry()">Undo Last</button>
                 </div>
                 <div id="messageArea"></div>
+
+                <!-- NEW: Today's Goals, Today's Conclusion, Tomorrow's Goals -->
+                <div class="notes-grid" id="notesGrid">
+                    <div class="note-card">
+                        <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <div style="font-weight:700;color:var(--primary)">Today's Goals</div>
+                            <div class="note-meta" id="todayGoalsMeta"></div>
+                        </div>
+                        <textarea id="todayGoalsInput" placeholder="e.g., Finish Chapter 3 of Economics"></textarea>
+                        <div class="note-actions">
+                            <button class="small-btn save" onclick="saveTodayGoals()">Save Today's Goals</button>
+                            <button class="small-btn" onclick="clearTodayGoals()">Clear</button>
+                        </div>
+                    </div>
+
+                    <div class="note-card">
+                        <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <div style="font-weight:700;color:var(--primary)">Today's Conclusion</div>
+                            <div class="note-meta" id="todayConclusionMeta"></div>
+                        </div>
+                        <textarea id="todayConclusionInput" placeholder="Write a short summary/conclusion of today's study..."></textarea>
+                        <div class="note-actions">
+                            <button class="small-btn save" onclick="saveTodayConclusion()">Save Conclusion</button>
+                            <button class="small-btn" onclick="clearTodayConclusion()">Clear</button>
+                        </div>
+                    </div>
+
+                    <div class="note-card">
+                        <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <div style="font-weight:700;color:var(--primary)">Tomorrow's Goals</div>
+                            <div class="note-meta" id="tomorrowGoalsMeta"></div>
+                        </div>
+                        <textarea id="tomorrowGoalsInput" placeholder="Write goals for tomorrow..."></textarea>
+                        <div class="note-actions">
+                            <button class="small-btn save" onclick="saveTomorrowGoals()">Save Tomorrow's Goals</button>
+                            <button class="small-btn" onclick="clearTomorrowGoals()">Clear</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -672,13 +774,18 @@
     </div>
 
     <script>
-        // Study Tracker Data
+        // Study Tracker Data (extended to include notes mapping)
         let studyData = {
             entries: [],
             totalHours: 0,
             streak: 0,
-            lastEntry: null
+            lastEntry: null,
+            notes: {} // dateString -> { goals: string, conclusion: string }
         };
+
+        // Separate storage for tomorrow goals with associated date
+        // Format: { date: 'Mon Sep 29 2025', text: '...' }
+        let nextGoals = null;
 
         // Quotes Database
         const quotes = [
@@ -691,42 +798,27 @@
             { text: "Education is the passport to the future, for tomorrow belongs to those who prepare for it today.", author: "Malcolm X" },
             { text: "The more that you read, the more things you will know. The more that you learn, the more places you'll go.", author: "Dr. Seuss" },
             { text: "Live as if you were to die tomorrow. Learn as if you were to live forever.", author: "Mahatma Gandhi" },
-            { text: "In learning you will teach, and in teaching you will learn.", author: "Phil Collins" },
-            { text: "The capacity to learn is a gift; the ability to learn is a skill; the willingness to learn is a choice.", author: "Brian Herbert" },
-            { text: "Success is no accident. It is hard work, perseverance, learning, studying, sacrifice and most of all, love of what you are doing.", author: "Pelé" },
-            { text: "There are no secrets to success. It is the result of preparation, hard work, and learning from failure.", author: "Colin Powell" },
-            { text: "Genius is 1% inspiration and 99% perspiration.", author: "Thomas Edison" },
-            { text: "The only way to do great work is to love what you do.", author: "Steve Jobs" },
-            { text: "Your limitation—it's only your imagination.", author: "Unknown" },
-            { text: "Push yourself, because no one else is going to do it for you.", author: "Unknown" },
-            { text: "Great things never come from comfort zones.", author: "Unknown" },
-            { text: "Dream it. Wish it. Do it.", author: "Unknown" },
-            { text: "Success doesn't just find you. You have to go out and get it.", author: "Unknown" },
-            { text: "The harder you work for something, the greater you'll feel when you achieve it.", author: "Unknown" },
-            { text: "Dream bigger. Do bigger.", author: "Unknown" },
-            { text: "Don't stop when you're tired. Stop when you're done.", author: "Unknown" },
-            { text: "Wake up with determination. Go to bed with satisfaction.", author: "Unknown" },
-            { text: "Do something today that your future self will thank you for.", author: "Sean Patrick Flanery" },
-            { text: "Little things make big days.", author: "Unknown" },
-            { text: "It's going to be hard, but hard does not mean impossible.", author: "Unknown" },
-            { text: "Don't wait for opportunity. Create it.", author: "Unknown" },
-            { text: "Sometimes we're tested not to show our weaknesses, but to discover our strengths.", author: "Unknown" },
-            { text: "The key to success is to focus on goals, not obstacles.", author: "Unknown" }
+            { text: "In learning you will teach, and in teaching you will learn.", author: "Phil Collins" }
         ];
 
         let selectedHours = 0;
         let powerModeActive = false;
+        let lastCheckedDateString = new Date().toDateString();
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             loadData();
-            updateDisplay();
+            ensureNotesStructure();
+            migrateNextGoals();
             updateDate();
             getNewQuote();
             createParticles();
             renderCalendar();
-            setInterval(updateDate, 60000);
-            
+            populateTodayNotesUI();
+            setInterval(updateDate, 60000); // update date display each minute
+            setInterval(checkAutoRollover, 30000); // check for date rollover
+            setInterval(saveData, 300000); // autosave
+
             // Hour button listeners
             document.querySelectorAll('.hour-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
@@ -739,6 +831,7 @@
 
         function createParticles() {
             const particlesContainer = document.getElementById('particles');
+            particlesContainer.innerHTML = '';
             for (let i = 0; i < 50; i++) {
                 const particle = document.createElement('div');
                 particle.className = 'particle';
@@ -755,45 +848,91 @@
             document.getElementById('currentDate').textContent = now.toLocaleDateString('en-US', options);
         }
 
+        // Load from localStorage (includes studyData and nextGoals)
         function loadData() {
             const saved = localStorage.getItem('studyTrackerData');
             if (saved) {
-                studyData = JSON.parse(saved);
+                try {
+                    const parsed = JSON.parse(saved);
+                    // merge safely
+                    studyData = Object.assign(studyData, parsed);
+                    if (!studyData.notes) studyData.notes = {};
+                } catch (e) {
+                    console.error('Failed to parse studyTrackerData', e);
+                }
             }
+
+            const savedNext = localStorage.getItem('studyTrackerNextGoals');
+            if (savedNext) {
+                try {
+                    nextGoals = JSON.parse(savedNext);
+                } catch (e) {
+                    console.error('Failed to parse studyTrackerNextGoals', e);
+                }
+            }
+
+            if (studyData.entries && studyData.entries.length > 0) {
+                // recompute totals if missing
+                if (typeof studyData.totalHours !== 'number' || !studyData.lastEntry) {
+                    recalcTotals();
+                }
+            }
+
             calculateStreak();
         }
 
         function saveData() {
+            // ensure notes object exists
+            if (!studyData.notes) studyData.notes = {};
             localStorage.setItem('studyTrackerData', JSON.stringify(studyData));
+            if (nextGoals) {
+                localStorage.setItem('studyTrackerNextGoals', JSON.stringify(nextGoals));
+            } else {
+                localStorage.removeItem('studyTrackerNextGoals');
+            }
+            // small debug
+            // console.log('Saved study data and nextGoals');
+        }
+
+        function ensureNotesStructure() {
+            if (!studyData.notes || typeof studyData.notes !== 'object') {
+                studyData.notes = {};
+            }
+        }
+
+        function recalcTotals() {
+            studyData.totalHours = studyData.entries.reduce((s, e) => s + (e.hours || 0), 0);
+            studyData.lastEntry = studyData.entries[studyData.entries.length - 1] || null;
         }
 
         function calculateStreak() {
-            if (studyData.entries.length === 0) {
+            if (!studyData.entries || studyData.entries.length === 0) {
                 studyData.streak = 0;
                 return;
             }
-            
+
             const sortedEntries = [...studyData.entries].sort((a, b) => new Date(b.date) - new Date(a.date));
             let streak = 0;
             let currentDate = new Date();
             currentDate.setHours(0, 0, 0, 0);
-            
+
             for (let entry of sortedEntries) {
                 const entryDate = new Date(entry.date);
                 entryDate.setHours(0, 0, 0, 0);
-                
+
                 const diffDays = Math.floor((currentDate - entryDate) / (1000 * 60 * 60 * 24));
-                
+
                 if (diffDays === streak) {
                     streak++;
                 } else {
                     break;
                 }
             }
-            
+
             studyData.streak = streak;
         }
 
+        // Add study hours for today (one entry per day)
         function addStudyHours() {
             if (selectedHours === 0) {
                 showMessage('Please select study hours first!', 'error');
@@ -802,7 +941,7 @@
 
             const today = new Date().toDateString();
             const existingEntry = studyData.entries.find(e => e.date === today);
-            
+
             if (existingEntry) {
                 showMessage('You have already logged hours for today!', 'error');
                 return;
@@ -817,18 +956,19 @@
             studyData.entries.push(entry);
             studyData.totalHours += selectedHours;
             studyData.lastEntry = entry;
-            
+
             calculateStreak();
             saveData();
             updateDisplay();
             renderCalendar();
-            
+
             showMessage(`Successfully added ${selectedHours} hours!`, 'success');
             checkAchievements();
-            
+
             // Reset selection
             document.querySelectorAll('.hour-btn').forEach(b => b.classList.remove('selected'));
             selectedHours = 0;
+            populateTodayNotesUI(); // show meta info update
         }
 
         function undoLastEntry() {
@@ -837,20 +977,20 @@
                 return;
             }
 
-            const lastIndex = studyData.entries.findIndex(e => 
+            const lastIndex = studyData.entries.findIndex(e =>
                 e.timestamp === studyData.lastEntry.timestamp
             );
-            
+
             if (lastIndex !== -1) {
                 const removedEntry = studyData.entries.splice(lastIndex, 1)[0];
                 studyData.totalHours -= removedEntry.hours;
                 studyData.lastEntry = studyData.entries[studyData.entries.length - 1] || null;
-                
+
                 calculateStreak();
                 saveData();
                 updateDisplay();
                 renderCalendar();
-                
+
                 showMessage(`Removed ${removedEntry.hours} hours from ${new Date(removedEntry.date).toLocaleDateString()}`, 'success');
             }
         }
@@ -859,77 +999,391 @@
             const percentage = Math.min((studyData.totalHours / 240) * 100, 100);
             const circumference = 2 * Math.PI * 140;
             const offset = circumference - (percentage / 100) * circumference;
-            
+
             document.getElementById('progressCircle').style.strokeDashoffset = offset;
             document.getElementById('progressHours').textContent = studyData.totalHours;
             document.getElementById('progressPercentage').textContent = percentage.toFixed(1) + '%';
-            
+
             document.getElementById('totalHours').textContent = studyData.totalHours;
             document.getElementById('daysCompleted').textContent = studyData.entries.length;
-            document.getElementById('avgHours').textContent = studyData.entries.length > 0 
-                ? (studyData.totalHours / studyData.entries.length).toFixed(1) 
+            document.getElementById('avgHours').textContent = studyData.entries.length > 0
+                ? (studyData.totalHours / studyData.entries.length).toFixed(1)
                 : '0';
             document.getElementById('remainingHours').textContent = Math.max(240 - studyData.totalHours, 0);
             document.getElementById('streakCount').textContent = studyData.streak;
-            
+
             // Update undo button
             document.getElementById('undoBtn').disabled = !studyData.lastEntry;
         }
 
+        // Renders last 30 days calendar; tooltip now includes hours, goals, conclusion
         function renderCalendar() {
             const grid = document.getElementById('historyGrid');
             grid.innerHTML = '';
-            
+
             const today = new Date();
             today.setHours(0, 0, 0, 0);
-            
+
             // Create last 30 days
             for (let i = 29; i >= 0; i--) {
                 const date = new Date(today);
                 date.setDate(date.getDate() - i);
                 const dateString = date.toDateString();
-                
+
                 const dayDiv = document.createElement('div');
                 dayDiv.className = 'history-day';
-                
+
                 const entry = studyData.entries.find(e => e.date === dateString);
-                
+                const note = studyData.notes && studyData.notes[dateString] ? studyData.notes[dateString] : null;
+
                 if (entry) {
                     dayDiv.classList.add('completed');
                     dayDiv.textContent = entry.hours + 'h';
-                    
-                    const tooltip = document.createElement('div');
-                    tooltip.className = 'tooltip';
-                    tooltip.textContent = `${date.toLocaleDateString()} - ${entry.hours} hours`;
-                    dayDiv.appendChild(tooltip);
                 } else {
                     dayDiv.classList.add('empty');
                     dayDiv.textContent = date.getDate();
                 }
-                
-                if (dateString === today.toDateString()) {
+
+                if (dateString === new Date().toDateString()) {
                     dayDiv.classList.add('today');
                 }
-                
+
+                // Tooltip content
+                const tooltip = document.createElement('div');
+                tooltip.className = 'tooltip';
+
+                const titleLine = document.createElement('div');
+                titleLine.className = 'line';
+                titleLine.style.fontWeight = '700';
+                titleLine.style.color = 'var(--primary)';
+                titleLine.textContent = date.toLocaleDateString();
+
+                tooltip.appendChild(titleLine);
+
+                if (entry) {
+                    const hoursLine = document.createElement('div');
+                    hoursLine.className = 'line';
+                    hoursLine.textContent = `Hours: ${entry.hours}h`;
+                    tooltip.appendChild(hoursLine);
+                } else {
+                    const noHoursLine = document.createElement('div');
+                    noHoursLine.className = 'line';
+                    noHoursLine.textContent = 'Hours: —';
+                    tooltip.appendChild(noHoursLine);
+                }
+
+                if (note && note.goals) {
+                    const goalsLine = document.createElement('div');
+                    goalsLine.className = 'line';
+                    goalsLine.textContent = `Goals: ${truncateForTooltip(note.goals)}`;
+                    tooltip.appendChild(goalsLine);
+                } else {
+                    const goalsLine = document.createElement('div');
+                    goalsLine.className = 'line';
+                    goalsLine.textContent = `Goals: —`;
+                    tooltip.appendChild(goalsLine);
+                }
+
+                if (note && note.conclusion) {
+                    const conclLine = document.createElement('div');
+                    conclLine.className = 'line';
+                    conclLine.textContent = `Conclusion: ${truncateForTooltip(note.conclusion)}`;
+                    tooltip.appendChild(conclLine);
+                } else {
+                    const conclLine = document.createElement('div');
+                    conclLine.className = 'line';
+                    conclLine.textContent = `Conclusion: —`;
+                    tooltip.appendChild(conclLine);
+                }
+
+                // small icon indicator if note exists
+                if (note && (note.goals || note.conclusion)) {
+                    const dot = document.createElement('div');
+                    dot.style.position = 'absolute';
+                    dot.style.top = '6px';
+                    dot.style.right = '6px';
+                    dot.style.width = '8px';
+                    dot.style.height = '8px';
+                    dot.style.borderRadius = '50%';
+                    dot.style.background = 'var(--accent)';
+                    dot.style.boxShadow = '0 0 8px rgba(255,0,255,0.3)';
+                    dayDiv.appendChild(dot);
+                }
+
+                dayDiv.appendChild(tooltip);
+
+                // Clicking a day populates a quick read-only modal-ish bubble (simple alert for now)
+                dayDiv.addEventListener('click', () => {
+                    showDayDetails(dateString);
+                });
+
                 grid.appendChild(dayDiv);
             }
         }
 
-        function showMessage(text, type) {
-            const messageArea = document.getElementById('messageArea');
-            messageArea.innerHTML = `<div class="message ${type}">${text}</div>`;
-            
-            setTimeout(() => {
-                messageArea.innerHTML = '';
-            }, 3000);
+        function truncateForTooltip(text, max = 80) {
+            if (!text) return '';
+            return text.length > max ? text.slice(0, max - 1) + '…' : text;
         }
 
-        function getNewQuote() {
-            const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
-            document.getElementById('quoteText').textContent = randomQuote.text;
-            document.getElementById('quoteAuthor').textContent = `— ${randomQuote.author}`;
+        function showDayDetails(dateString) {
+            // Simple detail box using confirm/prompt style UI
+            const note = studyData.notes && studyData.notes[dateString] ? studyData.notes[dateString] : {};
+            const entry = studyData.entries.find(e => e.date === dateString);
+            const hours = entry ? `${entry.hours}h` : '—';
+            const goals = note.goals || '—';
+            const conclusion = note.conclusion || '—';
+
+            // Use a custom modal-like element (not alert) to keep style
+            const modal = document.createElement('div');
+            modal.style.position = 'fixed';
+            modal.style.left = '50%';
+            modal.style.top = '50%';
+            modal.style.transform = 'translate(-50%, -50%)';
+            modal.style.background = 'linear-gradient(135deg, rgba(10,10,15,0.95), rgba(26,26,46,0.95))';
+            modal.style.border = '1px solid rgba(0,255,204,0.08)';
+            modal.style.padding = '18px';
+            modal.style.borderRadius = '12px';
+            modal.style.zIndex = 2000;
+            modal.style.maxWidth = '520px';
+            modal.style.boxShadow = '0 20px 60px rgba(0,0,0,0.6)';
+            modal.innerHTML = `
+                <div style="font-weight:800;color:var(--primary);margin-bottom:8px;">${new Date(dateString).toLocaleDateString()}</div>
+                <div style="margin-bottom:8px;"><strong>Hours:</strong> ${hours}</div>
+                <div style="margin-bottom:8px;"><strong>Goals:</strong> ${escapeHtml(goals)}</div>
+                <div style="margin-bottom:12px;"><strong>Conclusion:</strong> ${escapeHtml(conclusion)}</div>
+                <div style="display:flex;gap:10px;justify-content:flex-end;">
+                    <button id="closeDayBtn" class="small-btn">Close</button>
+                    <button id="editDayBtn" class="small-btn save">Edit</button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            document.getElementById('closeDayBtn').addEventListener('click', () => {
+                modal.remove();
+            });
+
+            document.getElementById('editDayBtn').addEventListener('click', () => {
+                modal.remove();
+                openEditForDate(dateString);
+            });
         }
 
+        function escapeHtml(text) {
+            if (!text) return '—';
+            return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+        }
+
+        // Allow editing a past date's notes by populating inputs and letting user save
+        function openEditForDate(dateString) {
+            // Move UI to that date by populating fields
+            // For UX simplicity we'll load the selected date into today's boxes (with a warning)
+            const note = studyData.notes && studyData.notes[dateString] ? studyData.notes[dateString] : {};
+            const confirmEdit = confirm(`Load notes for ${new Date(dateString).toLocaleDateString()} into the editor? Saving will update that date's notes.`);
+            if (!confirmEdit) return;
+
+            document.getElementById('todayGoalsInput').value = note.goals || '';
+            document.getElementById('todayConclusionInput').value = note.conclusion || '';
+
+            // Attach a one-time save function that will save to the chosen date instead of today
+            const saveFunc = () => {
+                const g = document.getElementById('todayGoalsInput').value.trim();
+                const c = document.getElementById('todayConclusionInput').value.trim();
+                if (!studyData.notes) studyData.notes = {};
+                studyData.notes[dateString] = { goals: g, conclusion: c };
+                saveData();
+                populateTodayNotesUI();
+                renderCalendar();
+                showMessage('Saved notes for ' + new Date(dateString).toLocaleDateString(), 'success');
+                // restore normal saveTodayGoals
+                document.getElementById('saveTodayGoalsHandler')?.remove();
+            };
+
+            // We temporarily create a hidden element that is triggered when user clicks Save Today's Goals.
+            // Remove any old handler
+            if (document.getElementById('saveTodayGoalsHandler')) {
+                document.getElementById('saveTodayGoalsHandler').remove();
+            }
+            const tmpBtn = document.createElement('button');
+            tmpBtn.id = 'saveTodayGoalsHandler';
+            tmpBtn.style.display = 'none';
+            document.body.appendChild(tmpBtn);
+            tmpBtn.addEventListener('click', saveFunc);
+
+            // When the user clicks the visible save button, trigger our tmp button's click
+            const visibleSaveBtn = document.querySelector('.note-card .small-btn.save');
+            // But since there are multiple save buttons, ensure we target the Today's Goals save
+            // We will override saveTodayGoals by setting a flag
+            window._editingDateOverride = dateString;
+            showMessage('Editing notes for ' + new Date(dateString).toLocaleDateString() + '. Save will apply to that date.', 'success');
+        }
+
+        // ----- Notes (Goals, Conclusion, Tomorrow) logic -----
+        function populateTodayNotesUI() {
+            const today = new Date().toDateString();
+            ensureNotesStructure();
+
+            const note = studyData.notes[today] || {};
+            document.getElementById('todayGoalsInput').value = note.goals || '';
+            document.getElementById('todayConclusionInput').value = note.conclusion || '';
+
+            // tomorrow goals field is separate
+            if (nextGoals && nextGoals.date) {
+                document.getElementById('tomorrowGoalsInput').value = nextGoals.text || '';
+                document.getElementById('tomorrowGoalsMeta').textContent = `Saved for ${new Date(nextGoals.date).toLocaleDateString()}`;
+            } else {
+                document.getElementById('tomorrowGoalsInput').value = '';
+                document.getElementById('tomorrowGoalsMeta').textContent = '';
+            }
+
+            document.getElementById('todayGoalsMeta').textContent = note.goals ? 'Saved' : '';
+            document.getElementById('todayConclusionMeta').textContent = note.conclusion ? 'Saved' : '';
+            updateDisplay();
+        }
+
+        function saveTodayGoals() {
+            // If user was editing a different date via openEditForDate, honor that override
+            const overrideDate = window._editingDateOverride || null;
+            const targetDate = overrideDate || new Date().toDateString();
+
+            const text = document.getElementById('todayGoalsInput').value.trim();
+            if (!studyData.notes) studyData.notes = {};
+            studyData.notes[targetDate] = studyData.notes[targetDate] || {};
+            studyData.notes[targetDate].goals = text;
+            saveData();
+            populateTodayNotesUI();
+            renderCalendar();
+            showMessage('Saved Today\'s Goals', 'success');
+
+            if (overrideDate) {
+                // clear override after save
+                window._editingDateOverride = null;
+            }
+        }
+
+        function clearTodayGoals() {
+            const overrideDate = window._editingDateOverride || null;
+            const targetDate = overrideDate || new Date().toDateString();
+            if (studyData.notes && studyData.notes[targetDate]) {
+                studyData.notes[targetDate].goals = '';
+                // if both empty, remove object
+                if (!studyData.notes[targetDate].goals && !studyData.notes[targetDate].conclusion) {
+                    delete studyData.notes[targetDate];
+                }
+                saveData();
+            }
+            document.getElementById('todayGoalsInput').value = '';
+            populateTodayNotesUI();
+            renderCalendar();
+            showMessage('Cleared Today\'s Goals', 'success');
+
+            if (overrideDate) window._editingDateOverride = null;
+        }
+
+        function saveTodayConclusion() {
+            const overrideDate = window._editingDateOverride || null;
+            const targetDate = overrideDate || new Date().toDateString();
+
+            const text = document.getElementById('todayConclusionInput').value.trim();
+            if (!studyData.notes) studyData.notes = {};
+            studyData.notes[targetDate] = studyData.notes[targetDate] || {};
+            studyData.notes[targetDate].conclusion = text;
+            saveData();
+            populateTodayNotesUI();
+            renderCalendar();
+            showMessage('Saved Today\'s Conclusion', 'success');
+
+            if (overrideDate) {
+                window._editingDateOverride = null;
+            }
+        }
+
+        function clearTodayConclusion() {
+            const overrideDate = window._editingDateOverride || null;
+            const targetDate = overrideDate || new Date().toDateString();
+            if (studyData.notes && studyData.notes[targetDate]) {
+                studyData.notes[targetDate].conclusion = '';
+                if (!studyData.notes[targetDate].goals && !studyData.notes[targetDate].conclusion) {
+                    delete studyData.notes[targetDate];
+                }
+                saveData();
+            }
+            document.getElementById('todayConclusionInput').value = '';
+            populateTodayNotesUI();
+            renderCalendar();
+            showMessage('Cleared Today\'s Conclusion', 'success');
+
+            if (overrideDate) window._editingDateOverride = null;
+        }
+
+        function saveTomorrowGoals() {
+            const text = document.getElementById('tomorrowGoalsInput').value.trim();
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const tomorrowDateString = tomorrow.toDateString();
+
+            if (!text) {
+                nextGoals = null;
+                localStorage.removeItem('studyTrackerNextGoals');
+                document.getElementById('tomorrowGoalsMeta').textContent = '';
+                showMessage('Cleared Tomorrow\'s Goals', 'success');
+                return;
+            }
+
+            nextGoals = {
+                date: tomorrowDateString,
+                text: text
+            };
+
+            localStorage.setItem('studyTrackerNextGoals', JSON.stringify(nextGoals));
+            document.getElementById('tomorrowGoalsMeta').textContent = `Saved for ${tomorrow.toLocaleDateString()}`;
+            showMessage('Saved Tomorrow\'s Goals', 'success');
+        }
+
+        function clearTomorrowGoals() {
+            nextGoals = null;
+            document.getElementById('tomorrowGoalsInput').value = '';
+            document.getElementById('tomorrowGoalsMeta').textContent = '';
+            localStorage.removeItem('studyTrackerNextGoals');
+            showMessage('Cleared Tomorrow\'s Goals', 'success');
+        }
+
+        // When the date changes (or on load), if nextGoals.date equals today's date -> move into today's notes
+        function migrateNextGoals() {
+            if (!nextGoals || !nextGoals.date) return;
+            const today = new Date().toDateString();
+            if (nextGoals.date === today) {
+                // move text into today's goals
+                if (!studyData.notes) studyData.notes = {};
+                studyData.notes[today] = studyData.notes[today] || {};
+                // If today's goals already exists, append with newline for clarity
+                const existing = studyData.notes[today].goals || '';
+                studyData.notes[today].goals = existing ? existing + '\n' + nextGoals.text : nextGoals.text;
+                // clear nextGoals
+                nextGoals = null;
+                localStorage.removeItem('studyTrackerNextGoals');
+                saveData();
+                populateTodayNotesUI();
+                renderCalendar();
+                showMessage('Tomorrow\'s goals moved into Today (date changed).', 'success');
+            }
+        }
+
+        // Called periodically to check if day rolled over while user has the app open
+        function checkAutoRollover() {
+            const nowDate = new Date().toDateString();
+            if (nowDate !== lastCheckedDateString) {
+                // day changed
+                lastCheckedDateString = nowDate;
+                updateDate();
+                migrateNextGoals();
+                // refresh calendar & UI
+                renderCalendar();
+                populateTodayNotesUI();
+            }
+        }
+
+        // ---- Achievements etc (unchanged from original, but saved data still used) ----
         function checkAchievements() {
             const achievements = [
                 { hours: 10, title: "Getting Started!", desc: "You've completed 10 hours!", icon: "🚀" },
@@ -939,14 +1393,14 @@
                 { hours: 200, title: "Almost There!", desc: "200 hours down!", icon: "🔥" },
                 { hours: 240, title: "CHALLENGE COMPLETE!", desc: "You did it! 240 hours!", icon: "👑" }
             ];
-            
+
             const streakAchievements = [
                 { days: 3, title: "3 Day Streak!", desc: "Keep the momentum going!", icon: "🔥" },
                 { days: 7, title: "Week Warrior!", desc: "7 days in a row!", icon: "💪" },
                 { days: 14, title: "Two Week Champion!", desc: "14 day streak!", icon: "⚡" },
                 { days: 30, title: "Month Master!", desc: "30 day perfect streak!", icon: "🌟" }
             ];
-            
+
             // Check hour achievements
             for (let achievement of achievements) {
                 const key = `achievement_${achievement.hours}`;
@@ -956,7 +1410,7 @@
                     break;
                 }
             }
-            
+
             // Check streak achievements
             for (let achievement of streakAchievements) {
                 const key = `streak_${achievement.days}`;
@@ -977,7 +1431,7 @@
                 <div class="achievement-desc">${achievement.desc}</div>
             `;
             document.body.appendChild(popup);
-            
+
             setTimeout(() => {
                 popup.style.animation = 'achievementPop 0.5s ease reverse';
                 setTimeout(() => {
@@ -986,13 +1440,32 @@
             }, 3000);
         }
 
+        function showMessage(text, type) {
+            const messageArea = document.getElementById('messageArea');
+            messageArea.innerHTML = `<div class="message ${type}">${text}</div>`;
+
+            setTimeout(() => {
+                messageArea.innerHTML = '';
+            }, 3000);
+        }
+
+        function getNewQuote() {
+            const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+            document.getElementById('quoteText').textContent = randomQuote.text;
+            document.getElementById('quoteAuthor').textContent = `— ${randomQuote.author}`;
+        }
+
+        // small helper to show day details used earlier
+        // (already implemented above)
+
+        // Toggle power mode (unchanged)
         function togglePowerMode() {
             powerModeActive = !powerModeActive;
             document.body.classList.toggle('power-mode-active', powerModeActive);
-            
+
             if (powerModeActive) {
                 showMessage('⚡ POWER MODE ACTIVATED! Maximum productivity!', 'success');
-                
+
                 // Add extra particles for power mode
                 const particlesContainer = document.getElementById('particles');
                 for (let i = 0; i < 30; i++) {
@@ -1046,7 +1519,7 @@
                 confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
                 confetti.style.zIndex = '9999';
                 document.body.appendChild(confetti);
-                
+
                 const animation = confetti.animate([
                     { transform: `translateY(0) rotate(0deg)`, opacity: 1 },
                     { transform: `translateY(${window.innerHeight + 10}px) rotate(${Math.random() * 720}deg)`, opacity: 0 }
@@ -1054,7 +1527,7 @@
                     duration: 3000 + Math.random() * 2000,
                     easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
                 });
-                
+
                 animation.onfinish = () => confetti.remove();
             }
         }
@@ -1068,18 +1541,14 @@
             }
         }
 
-        // Auto-save every 5 minutes
-        setInterval(saveData, 300000);
-
-        // Add smooth scroll behavior
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                document.querySelector(this.getAttribute('href')).scrollIntoView({
-                    behavior: 'smooth'
-                });
-            });
+        // Utility: when page unload, save
+        window.addEventListener('beforeunload', () => {
+            saveData();
         });
+
+        // Helper: small HTML-escape for modal
+        // Already defined above as escapeHtml
+
     </script>
 </body>
 </html>
