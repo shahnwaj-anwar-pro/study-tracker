@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Study Progress Tracker — 240 hrs / 30 days</title>
+  <style>
+    :root{
+      --primary:#6366f1; /* indigo */
+      --bg:#f8fafc;
+      --text:#1e293b;
+      --success:#10b981;
+      --accent:#f59e0b;
+      --muted:#94a3b8;
+      --card:#ffffff;
+      --glass: rgba(255,255,255,0.6);
+      --shadow: 0 6px 18px rgba(30,41,59,0.06);
+      --radius:16px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial; margin:0}
+
+    .container{max-width:980px;margin:36px auto;padding:20px}
+    .grid{display:grid;grid-template-columns:360px 1fr;gap:20px}
+
+    /* Card */
+    .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px}
+
+    /* Main circle */
+    .circle-wrap{display:flex;align-items:center;justify-content:center;height:360px}
+    .progress-circle{width:260px;height:260px;position:relative}
+    .progress-circle svg{transform:rotate(-90deg)}
+    .progress-bg{stroke:rgba(30,41,59,0.06);stroke-width:16;fill:none}
+    .progress-bar{stroke:var(--primary);stroke-width:16;stroke-linecap:round;fill:none;transition:stroke-dashoffset 900ms cubic-bezier(.2,.9,.25,1), stroke 400ms}
+    .progress-text{position:absolute;left:0;right:0;top:45%;text-align:center;font-weight:600}
+    .progress-text .big{font-size:26px}
+    .progress-text .small{font-size:13px;color:var(--muted);margin-top:6px}
+
+    /* Info list */
+    .stats{display:flex;flex-direction:column;gap:12px;margin-top:14px}
+    .stat{display:flex;justify-content:space-between;align-items:center;padding:12px;border-radius:12px;background:linear-gradient(180deg, rgba(99,102,241,0.05), transparent);}
+    .stat .label{color:var(--muted);font-size:13px}
+    .stat .value{font-weight:700}
+
+    /* Daily input */
+    .daily{display:flex;flex-direction:column;gap:12px}
+    .row{display:flex;gap:10px;align-items:center}
+    select{padding:10px 12px;border-radius:10px;border:1px solid #e6eef8;background:transparent;font-weight:600}
+    button{background:var(--primary);color:white;border:none;padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer;transition:transform .15s ease, box-shadow .15s ease}
+    button:active{transform:translateY(2px)}
+    button.ghost{background:transparent;color:var(--primary);border:1px solid rgba(99,102,241,0.15)}
+    button.success{background:var(--success)}
+    .muted{color:var(--muted);font-size:14px}
+
+    /* Confirmation toast */
+    .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:28px;background:var(--card);padding:12px 18px;border-radius:12px;box-shadow:var(--shadow);display:flex;gap:10px;align-items:center;opacity:0;pointer-events:none;transition:opacity .3s ease,transform .35s cubic-bezier(.2,.9,.25,1)}
+    .toast.show{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(-8px)}
+
+    /* Undo */
+    .undo{margin-top:6px}
+
+    /* Milestone badge */
+    .milestone{display:inline-block;padding:8px 12px;border-radius:999px;background:linear-gradient(90deg,var(--accent),var(--primary));color:white;font-weight:700;font-size:13px}
+
+    /* Responsive */
+    @media (max-width:880px){
+      .grid{grid-template-columns:1fr;}
+      .circle-wrap{height:280px}
+      .progress-circle{width:220px;height:220px}
+    }
+
+    /* tiny animations */
+    @keyframes pop {0%{transform:scale(.96);opacity:.6}60%{transform:scale(1.02)}100%{transform:scale(1)}}
+    .pulse{animation:pop .42s ease}
+
+    .current-day{padding:8px;border-radius:10px;background:linear-gradient(180deg, rgba(16,185,129,0.08), transparent)}
+
+    /* micro-confirm modal */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(2,6,23,0.45);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s ease}
+    .modal-backdrop.show{opacity:1;pointer-events:auto}
+    .modal{background:var(--card);padding:18px;border-radius:12px;max-width:420px;box-shadow:var(--shadow)}
+    .modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="grid">
+      <div class="card">
+        <div class="circle-wrap">
+          <div class="progress-circle" aria-hidden="true">
+            <svg width="260" height="260" viewBox="0 0 260 260">
+              <circle class="progress-bg" cx="130" cy="130" r="100"></circle>
+              <circle class="progress-bar" cx="130" cy="130" r="100" stroke-dasharray="628" stroke-dashoffset="628"></circle>
+            </svg>
+            <div class="progress-text">
+              <div class="big" id="hoursDisplay">0 / 240 hrs</div>
+              <div class="small" id="percentDisplay">0% completed</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats" id="statsArea">
+          <div class="stat"><div><div class="label">Total hours</div></div><div class="value" id="totalHours">0</div></div>
+          <div class="stat"><div><div class="label">Days completed</div></div><div class="value" id="daysDone">0 / 30</div></div>
+          <div class="stat"><div><div class="label">Average hours per day</div></div><div class="value" id="avgHours">0</div></div>
+          <div class="stat"><div><div class="label">Remaining hours</div></div><div class="value" id="remaining">240</div></div>
+        </div>
+
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div>
+            <h3 style="margin:0">Daily Entry</h3>
+            <div class="muted">Only one entry allowed per day • Target: 240 hrs in 30 days</div>
+          </div>
+          <div id="milestoneBadge" style="display:none"></div>
+        </div>
+
+        <div class="daily">
+          <div class="row">
+            <div style="flex:1">
+              <div class="muted">Today's date</div>
+              <div id="todayDate" style="font-weight:700;margin-top:6px"></div>
+            </div>
+            <div style="min-width:160px">
+              <div class="muted">Select hours</div>
+              <select id="hourSelect" aria-label="Select study hours">
+                <option value="1">1 hour</option>
+                <option value="2">2 hours</option>
+                <option value="3">3 hours</option>
+                <option value="4">4 hours</option>
+                <option value="5">5 hours</option>
+                <option value="6">6 hours</option>
+                <option value="7">7 hours</option>
+                <option value="8">8 hours</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row">
+            <button id="addBtn">Add Today's Study Hours</button>
+            <button id="undoBtn" class="ghost" style="display:none">Undo Last Entry</button>
+          </div>
+
+          <div id="confirmMsg" style="min-height:36px"></div>
+
+          <div style="margin-top:6px" id="todayStatus"></div>
+
+          <div class="undo" style="margin-top:10px">
+            <div class="muted">Last entry: <span id="lastEntry">—</span></div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">✓ Saved</div>
+
+  <div class="modal-backdrop" id="modalBackdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div id="modalText">Are you sure?</div>
+      <div class="actions">
+        <button id="modalCancel" class="ghost">Cancel</button>
+        <button id="modalConfirm" class="success">Yes, undo</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ----- Data model in localStorage -----
+       structure: {entries: {YYYY-MM-DD: hours}, history: [{date,hours}], createdAt: timestamp}
+    */
+    const STORAGE_KEY = 'studyTrackerData_v1';
+    const TARGET_HOURS = 240;
+    const TARGET_DAYS = 30;
+
+    // helpers
+    function todayYMD(date = new Date()){
+      const y = date.getFullYear();
+      const m = String(date.getMonth()+1).padStart(2,'0');
+      const d = String(date.getDate()).padStart(2,'0');
+      return `${y}-${m}-${d}`;
+    }
+    function prettyDate(ymd){
+      const d = new Date(ymd + 'T00:00:00');
+      return d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
+    }
+
+    // load/save
+    function loadData(){
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if(!raw) return {entries:{}, history:[]};
+        return JSON.parse(raw);
+      }catch(e){console.error(e); return {entries:{},history:[]}};
+    }
+    function saveData(data){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+
+    // UI refs
+    const percentDisplay = document.getElementById('percentDisplay');
+    const hoursDisplay = document.getElementById('hoursDisplay');
+    const totalHoursEl = document.getElementById('totalHours');
+    const daysDoneEl = document.getElementById('daysDone');
+    const avgHoursEl = document.getElementById('avgHours');
+    const remainingEl = document.getElementById('remaining');
+    const thumb = document.querySelector('.progress-bar');
+    const addBtn = document.getElementById('addBtn');
+    const undoBtn = document.getElementById('undoBtn');
+    const hourSelect = document.getElementById('hourSelect');
+    const todayDateEl = document.getElementById('todayDate');
+    const confirmMsg = document.getElementById('confirmMsg');
+    const toast = document.getElementById('toast');
+    const lastEntryEl = document.getElementById('lastEntry');
+    const todayStatus = document.getElementById('todayStatus');
+    const modalBackdrop = document.getElementById('modalBackdrop');
+    const modalText = document.getElementById('modalText');
+    const modalConfirm = document.getElementById('modalConfirm');
+    const modalCancel = document.getElementById('modalCancel');
+    const milestoneBadge = document.getElementById('milestoneBadge');
+
+    // drawing progress
+    const CIRCUMFERENCE = 2 * Math.PI * 100; // r=100
+    thumb.style.strokeDasharray = CIRCUMFERENCE;
+    thumb.style.strokeDashoffset = CIRCUMFERENCE;
+
+    let data = loadData();
+    let pendingUndo = null; // holds entry to be undone with confirmation
+
+    function computeTotals(entries){
+      const values = Object.values(entries).map(v=>Number(v));
+      const total = values.reduce((a,b)=>a+b,0);
+      const days = Object.keys(entries).length;
+      const avg = days? (total/days) : 0;
+      return {total,days,avg};
+    }
+
+    function drawProgress(total){
+      const pct = Math.min(100, Math.round((total / TARGET_HOURS) * 100));
+      const offset = CIRCUMFERENCE * (1 - Math.min(1, total / TARGET_HOURS));
+      // animate stroke-dashoffset via style
+      thumb.style.strokeDashoffset = offset;
+      percentDisplay.textContent = `${pct}% completed`;
+      hoursDisplay.innerHTML = `${total} / ${TARGET_HOURS} hrs`;
+
+      // change color as milestones reached
+      if(pct >= 100) thumb.style.stroke = 'linear-gradient(90deg,var(--success),var(--primary))';
+    }
+
+    function updateStats(){
+      data = loadData();
+      const {total,days,avg} = computeTotals(data.entries);
+      totalHoursEl.textContent = total;
+      daysDoneEl.textContent = `${days} / ${TARGET_DAYS}`;
+      avgHoursEl.textContent = avg ? avg.toFixed(2) : '0';
+      remainingEl.textContent = Math.max(0, TARGET_HOURS - total);
+      drawProgress(total);
+
+      // last entry
+      if(data.history && data.history.length){
+        const last = data.history[data.history.length-1];
+        lastEntryEl.textContent = `${last.hours} hrs • ${prettyDate(last.date)}`;
+        undoBtn.style.display = 'inline-block';
+      } else {
+        lastEntryEl.textContent = '—';
+        undoBtn.style.display = 'none';
+      }
+
+      // milestone badge
+      const pct = Math.round((total/TARGET_HOURS)*100);
+      if(pct>=100) { milestoneBadge.style.display='inline-block'; milestoneBadge.innerHTML='Goal completed 🎉'; milestoneBadge.className='milestone'; }
+      else if(pct>=75){ milestoneBadge.style.display='inline-block'; milestoneBadge.innerHTML='75% Milestone — Nice!'; milestoneBadge.className='milestone'; }
+      else if(pct>=50){ milestoneBadge.style.display='inline-block'; milestoneBadge.innerHTML='Halfway there — Keep it up!'; milestoneBadge.className='milestone'; }
+      else if(pct>=25){ milestoneBadge.style.display='inline-block'; milestoneBadge.innerHTML='25% reached — Good start!'; milestoneBadge.className='milestone'; }
+      else { milestoneBadge.style.display='none' }
+
+      // today's status
+      const todayKey = todayYMD();
+      if(data.entries[todayKey]){
+        todayStatus.innerHTML = `<div class="current-day">You've logged <strong>${data.entries[todayKey]} hrs</strong> for today — great work!</div>`;
+        addBtn.disabled = true; addBtn.style.opacity = .6; hourSelect.disabled = true;
+      } else {
+        todayStatus.innerHTML = `<div class="muted">You haven't logged study hours for today yet.</div>`;
+        addBtn.disabled = false; addBtn.style.opacity = 1; hourSelect.disabled = false;
+      }
+
+      // accessibility
+      percentDisplay.setAttribute('aria-valuenow', Math.round((total / TARGET_HOURS) * 100));
+    }
+
+    function showToast(message = 'Saved'){
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(()=>toast.classList.remove('show'),1600);
+    }
+
+    function addToday(){
+      const hours = Number(hourSelect.value);
+      if(!hours || hours < 1 || hours > 8) {confirmMsg.innerHTML = '<div class="muted">Please pick between 1–8 hours.</div>'; return}
+      const key = todayYMD();
+      data = loadData();
+      if(data.entries[key]){confirmMsg.innerHTML = '<div class="muted">You already added for today.</div>'; return}
+
+      // add
+      data.entries[key] = hours;
+      data.history = data.history || [];
+      data.history.push({date:key,hours:hours});
+      saveData(data);
+
+      // small animation
+      addBtn.classList.add('pulse');
+      setTimeout(()=>addBtn.classList.remove('pulse'),420);
+
+      confirmMsg.innerHTML = `<div style="color:var(--success);font-weight:700">Added ${hours} hrs for today</div>`;
+      showToast('Saved — great work!');
+      updateStats();
+
+      // celebrate if milestone
+      const totals = computeTotals(data.entries);
+      const pct = Math.round((totals.total/TARGET_HOURS)*100);
+      if([25,50,75,100].some(m=>pct>=m && pct-m < (hours/TARGET_HOURS*100)+1)){
+        // gentle confetti-like text using modal for emphasis
+        smallCelebrate(pct);
+      }
+    }
+
+    function smallCelebrate(pct){
+      const msg = `Milestone reached — ${pct}% of goal!`;
+      confirmMsg.innerHTML = `<div style="padding:10px;border-radius:10px;background:linear-gradient(90deg,var(--accent),var(--primary));color:white;font-weight:700">${msg}</div>`;
+      setTimeout(()=>confirmMsg.innerHTML = '',2500);
+    }
+
+    // Undo flow with confirmation
+    function prepareUndo(){
+      data = loadData();
+      if(!data.history || data.history.length === 0) return;
+      pendingUndo = data.history[data.history.length-1];
+      modalText.textContent = `Undo last entry: ${pendingUndo.hours} hrs • ${prettyDate(pendingUndo.date)}?`;
+      modalBackdrop.classList.add('show');
+    }
+    modalCancel.addEventListener('click', ()=>{ pendingUndo = null; modalBackdrop.classList.remove('show'); });
+    modalBackdrop.addEventListener('click', (e)=>{ if(e.target === modalBackdrop){ pendingUndo = null; modalBackdrop.classList.remove('show'); } });
+    modalConfirm.addEventListener('click', ()=>{
+      if(!pendingUndo) {modalBackdrop.classList.remove('show'); return}
+      data = loadData();
+      // remove from entries and history
+      delete data.entries[pendingUndo.date];
+      data.history.pop();
+      saveData(data);
+      modalBackdrop.classList.remove('show');
+      showToast('Entry undone');
+      confirmMsg.innerHTML = `<div class="muted">Removed ${pendingUndo.hours} hrs from ${prettyDate(pendingUndo.date)}</div>`;
+      pendingUndo = null;
+      updateStats();
+    });
+
+    // initialize
+    function init(){
+      // ensure structure
+      data = loadData();
+      if(!data.entries) data.entries = {};
+      if(!data.history) data.history = [];
+      saveData(data);
+
+      todayDateEl.textContent = prettyDate(todayYMD());
+
+      // prevent future date entries: we only accept today's entry via UI
+
+      addBtn.addEventListener('click', addToday);
+      undoBtn.addEventListener('click', prepareUndo);
+
+      updateStats();
+
+      // animate a small first-draw
+      setTimeout(()=>{
+        document.querySelector('.progress-bar').style.transition = 'stroke-dashoffset 900ms cubic-bezier(.2,.9,.25,1)';
+      },120);
+
+      // keyboard shortcut: u to undo
+      document.addEventListener('keydown', (e)=>{
+        if((e.key === 'u' || e.key === 'U') && data.history && data.history.length){ prepareUndo(); }
+      });
+    }
+
+    init();
+
+    // Expose some helpers to console for advanced users (no future date entry allowed)
+    window.studyTracker = {
+      reset(){ if(confirm('Reset all study data? This cannot be undone.')){ localStorage.removeItem(STORAGE_KEY); location.reload(); } },
+      export(){ const d = loadData(); const blob = new Blob([JSON.stringify(d,null,2)],{type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download='studyTracker_export.json'; a.click(); URL.revokeObjectURL(url); }
+    };
+
+  </script>
+</body>
+</html>
